@@ -258,6 +258,8 @@ uint32_t EmotionEngine::read_instr(uint32_t address)
     if (!uncached)
     {
         int index = (address >> 6) & 0x7F;
+        int offset = address & 0x3F;
+        address &= 0x1FFFFFFF & (~0x3F);
         uint16_t tag = address >> 13;
 
         ICacheLine* line = &icache[index];
@@ -277,12 +279,18 @@ uint32_t EmotionEngine::read_instr(uint32_t address)
                     line->valid[0] = true;
                     line->lfu[0] ^= true;
                     line->tag[0] = tag;
+                    for (int i = 0; i < 64; i += 8)
+                        *(uint64_t*)&line->data[0][i] = e->read64(address + i);
+                    return *(uint32_t*)&line->data[0][offset];
                 }
                 else if (!line->valid[1])
                 {
                     line->valid[1] = true;
                     line->lfu[1] ^= true;
                     line->tag[1] = tag;
+                    for (int i = 0; i < 64; i += 8)
+                        *(uint64_t*)&line->data[1][i] = e->read64(address + i);
+                    return *(uint32_t*)&line->data[1][offset];
                 }
                 else
                 {
@@ -290,9 +298,16 @@ uint32_t EmotionEngine::read_instr(uint32_t address)
                     int row_to_fill = line->lfu[0] ^ line->lfu[1];
                     line->lfu[row_to_fill] ^= true;
                     line->tag[row_to_fill] = tag;
+                    for (int i = 0; i < 64; i += 8)
+                        *(uint64_t*)&line->data[row_to_fill][i] = e->read64(address + i);
+                    return *(uint32_t*)&line->data[row_to_fill][offset];
                 }
             }
+            else
+                return *(uint32_t*)&line->data[1][offset];
         }
+        else
+            return *(uint32_t*)&line->data[0][offset];
     }
     else
     {

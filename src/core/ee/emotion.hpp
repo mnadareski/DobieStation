@@ -23,6 +23,8 @@ struct ICacheLine
     bool valid[2];
     bool lfu[2];
     uint16_t tag[2];
+
+    uint8_t data[2][64];
 };
 
 class EmotionEngine
